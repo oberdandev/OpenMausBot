@@ -144,7 +144,7 @@ COPY deploy/fly/Caddyfile /app/cloud/Caddyfile
 # copies stay root's. Only the /data volume is maus's; the launcher refuses to
 # start otherwise (codeTrustProblem), and this check refuses to build.
 # DuckDB and resvg change on a version bump, not per commit: beneath the app files.
-COPY --from=build /src/dist-native/duckdb/linux-x64 ./duckdb
+COPY --from=build /src/dist-native/duckdb/linux-arm64 ./duckdb
 COPY --from=build /src/dist-server ./dist-server
 COPY --from=build /src/dist ./dist
 RUN export HOME=/tmp/omb-build-home \
@@ -173,7 +173,7 @@ FROM runtime AS server
 # Optional engine CLIs baked into the image (space-separated npm packages).
 ARG ENGINES=""
 RUN if [ -n "$ENGINES" ]; then HOME=/tmp/omb-build-home npm install -g $ENGINES && rm -rf /tmp/omb-build-home /tmp/node-compile-cache; fi
-COPY --from=build --chown=maus:maus /src/dist-native/duckdb/linux-x64 ./duckdb
+COPY --from=build --chown=maus:maus /src/dist-native/duckdb/linux-arm64 ./duckdb
 COPY --from=build --chown=maus:maus /src/dist-server ./dist-server
 COPY --from=build --chown=maus:maus /src/dist ./dist
 ENV HOME=/data
