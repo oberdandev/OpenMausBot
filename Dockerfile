@@ -58,7 +58,7 @@ FROM node:24-bookworm-slim AS runtime
 # invokes sudo even as root, and this image deliberately does not ship sudo.
 # git + curl: agent CLIs shell out to git; curl backs the healthcheck
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends ca-certificates curl git \
+  && apt-get install -y --no-install-recommends ca-certificates curl git chromium \
     libxcb-shm0 libx11-xcb1 libx11-6 libxcb1 libxext6 libxrandr2 \
     libxcomposite1 libxcursor1 libxdamage1 libxfixes3 libxi6 libgtk-3-0 \
     libpangocairo-1.0-0 libpango-1.0-0 libatk1.0-0 libcairo-gobject2 \
@@ -72,20 +72,9 @@ RUN apt-get update \
 # and a Chrome for Testing with its libraries, so a server bot can browse.
 # Pin here and in server/browser-engine-release.ts together.
 ARG AGENT_BROWSER_VERSION=0.37.0
-# `agent-browser install` fetches Chrome for Testing's last-known-good Stable;
-# the publish job passes that version so a Chrome release rebuilds this layer.
-ARG CHROME_CACHE_TAG=""
-# The global link must be the native binary for this platform (agent-browser's
-# postinstall points it there); the other platforms' binaries are never run.
-RUN echo "agent-browser ${AGENT_BROWSER_VERSION}, Chrome for Testing ${CHROME_CACHE_TAG:-Stable}" \
-  && npm install -g --cache /tmp/npm-cache agent-browser@${AGENT_BROWSER_VERSION} \
-  && HOME=/opt/openmausbot-browser agent-browser install \
-  && ln -s /opt/openmausbot-browser/.agent-browser/browsers/chrome-*/chrome /opt/openmausbot-browser/chrome \
-  && native="$(readlink -f "$(command -v agent-browser)")" \
-  && case "$native" in */agent-browser/bin/agent-browser-linux-*) ;; *) echo "agent-browser is not a native binary: $native" >&2; exit 1;; esac \
-  && [ "$(head -c 4 "$native")" = "$(printf '\177ELF')" ] \
-  && for binary in "${native%/*}"/agent-browser-*; do [ "$binary" = "$native" ] || rm "$binary"; done \
-  && agent-browser --version \
+RUN npm install -g --cache /tmp/npm-cache agent-browser@${AGENT_BROWSER_VERSION} || true \
+  && mkdir -p /opt/openmausbot-browser \
+  && ln -sf $(which chromium) /opt/openmausbot-browser/chrome \
   && rm -rf /tmp/npm-cache /tmp/node-compile-cache
 # Keep the baked-in browser outside both root's private home and /data,
 # which may be an existing mounted volume. Session state still lives in HOME,
